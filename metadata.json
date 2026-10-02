@@ -1,0 +1,8 @@
+{
+  "name": "Remix Remix CN",
+  "description": "Estúdio interativo para criar vídeos explicativos sobre código com narração sincronizada, digitação animada, foco e exportação.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

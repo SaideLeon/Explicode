@@ -1,0 +1,722 @@
+{
+  "title": "Como Funciona uma Máquina Virtual",
+  "file": "virtualizacao.concept",
+  "lang": "pt-BR",
+  "code": [],
+  "segments": [
+    {
+      "say": "Uma máquina virtual é um computador completo emulado por software dentro de outro computador físico. Ela possui processador, memória, disco e placas de rede virtuais, funcionando com total autonomia.",
+      "scene": {
+        "title": "Conceito de Virtualização de Hardware",
+        "nodes": [
+          {
+            "id": "guest",
+            "x": 28,
+            "y": 31,
+            "icon": "💻",
+            "label": "Máquina\nvirtual",
+            "sub": "computador completo",
+            "color": "green",
+            "on": "máquina"
+          },
+          {
+            "id": "engine",
+            "x": 80,
+            "y": 31,
+            "icon": "🧩",
+            "label": "Software",
+            "sub": "emulação",
+            "color": "violet",
+            "on": "software"
+          },
+          {
+            "id": "host",
+            "x": 132,
+            "y": 31,
+            "icon": "🖥️",
+            "label": "Computador\nfísico",
+            "sub": "hardware real",
+            "color": "slate",
+            "on": "físico"
+          },
+          {
+            "id": "cpu",
+            "kind": "icon",
+            "x": 30,
+            "y": 57,
+            "icon": "⚙️",
+            "label": "Processador",
+            "size": 3.4,
+            "color": "blue",
+            "on": "processador"
+          },
+          {
+            "id": "ram",
+            "kind": "icon",
+            "x": 63,
+            "y": 57,
+            "icon": "🧠",
+            "label": "Memória",
+            "size": 3.4,
+            "color": "cyan",
+            "on": "memória"
+          },
+          {
+            "id": "disk",
+            "kind": "icon",
+            "x": 96,
+            "y": 57,
+            "icon": "💾",
+            "label": "Disco",
+            "size": 3.4,
+            "color": "amber",
+            "on": "disco"
+          },
+          {
+            "id": "net",
+            "kind": "icon",
+            "x": 129,
+            "y": 57,
+            "icon": "🌐",
+            "label": "Rede virtual",
+            "size": 3.4,
+            "color": "rose",
+            "on": "placas"
+          }
+        ],
+        "arrows": [
+          {
+            "from": "guest",
+            "to": "engine",
+            "label": "emulada",
+            "color": "violet",
+            "on": "emulado"
+          },
+          {
+            "from": "engine",
+            "to": "host",
+            "label": "dentro de",
+            "color": "slate",
+            "on": "dentro"
+          }
+        ]
+      }
+    },
+    {
+      "say": "A mágica acontece graças ao hipervisor, o software responsável por gerenciar e fatiar o hardware real. Ele distribui os recursos físicos com segurança entre múltiplos sistemas operacionais hóspedes simultâneos.",
+      "scene": {
+        "title": "O Papel Central do Hipervisor",
+        "nodes": [
+          {
+            "id": "hyp",
+            "x": 80,
+            "y": 41,
+            "icon": "🧠",
+            "label": "Hipervisor",
+            "sub": "gerencia e fatia",
+            "color": "violet",
+            "on": "hipervisor"
+          },
+          {
+            "id": "hw",
+            "x": 26,
+            "y": 41,
+            "icon": "🖥️",
+            "label": "Hardware\nreal",
+            "sub": "CPU, RAM, disco",
+            "color": "slate",
+            "on": "hardware"
+          },
+          {
+            "id": "vm1",
+            "x": 134,
+            "y": 28,
+            "icon": "📦",
+            "label": "VM 1",
+            "sub": "SO hóspede",
+            "color": "green",
+            "on": "múltiplos"
+          },
+          {
+            "id": "vm2",
+            "x": 134,
+            "y": 55,
+            "icon": "📦",
+            "label": "VM 2",
+            "sub": "SO hóspede",
+            "color": "cyan",
+            "on": "simultâneos"
+          }
+        ],
+        "arrows": [
+          {
+            "from": "hw",
+            "to": "hyp",
+            "label": "fatiado em",
+            "color": "slate",
+            "on": "fatiar"
+          },
+          {
+            "from": "hyp",
+            "to": "vm1",
+            "label": "distribui",
+            "color": "green",
+            "on": "distribui"
+          },
+          {
+            "from": "hyp",
+            "to": "vm2",
+            "label": "seguro",
+            "color": "cyan",
+            "on": "segurança"
+          }
+        ]
+      }
+    },
+    {
+      "say": "Existem dois tipos principais de hipervisor na indústria tecnológica moderna. O Tipo 1 roda direto no hardware sem intermediários, enquanto o Tipo 2 executa em cima de um sistema operacional convencional.",
+      "scene": {
+        "title": "Hipervisores Tipo 1 versus Tipo 2",
+        "nodes": [
+          {
+            "id": "t1_head",
+            "kind": "text",
+            "x": 40,
+            "y": 19,
+            "label": "TIPO 1 · direto no hardware",
+            "size": 3.6,
+            "color": "green",
+            "on": "Tipo 1"
+          },
+          {
+            "id": "t1_vm",
+            "x": 40,
+            "y": 30,
+            "label": "Máquinas virtuais",
+            "size": 3.2,
+            "color": "green",
+            "on": "intermediários",
+            "h": 11
+          },
+          {
+            "id": "t1_hyp",
+            "x": 40,
+            "y": 43,
+            "label": "Hipervisor",
+            "size": 3.2,
+            "color": "violet",
+            "on": "roda",
+            "h": 11
+          },
+          {
+            "id": "t1_hw",
+            "x": 40,
+            "y": 56,
+            "label": "Hardware",
+            "size": 3.2,
+            "color": "slate",
+            "on": "hardware",
+            "h": 11
+          },
+          {
+            "id": "vs",
+            "kind": "text",
+            "x": 80,
+            "y": 42,
+            "label": "VS",
+            "size": 7,
+            "color": "rose",
+            "on": "enquanto"
+          },
+          {
+            "id": "t2_head",
+            "kind": "text",
+            "x": 120,
+            "y": 19,
+            "label": "TIPO 2 · sobre um SO",
+            "size": 3.6,
+            "color": "amber",
+            "on": "Tipo 2"
+          },
+          {
+            "id": "t2_vm",
+            "x": 120,
+            "y": 27.5,
+            "label": "Máquinas virtuais",
+            "size": 3.2,
+            "color": "green",
+            "on": "convencional",
+            "h": 11
+          },
+          {
+            "id": "t2_hyp",
+            "x": 120,
+            "y": 39,
+            "label": "Hipervisor",
+            "size": 3.2,
+            "color": "violet",
+            "on": "cima",
+            "h": 11
+          },
+          {
+            "id": "t2_os",
+            "x": 120,
+            "y": 50.5,
+            "label": "Sistema operacional",
+            "size": 3.2,
+            "color": "amber",
+            "on": "sistema",
+            "h": 11
+          },
+          {
+            "id": "t2_hw",
+            "x": 120,
+            "y": 62,
+            "label": "Hardware",
+            "size": 3.2,
+            "color": "slate",
+            "on": "executa",
+            "h": 11
+          }
+        ],
+        "arrows": []
+      }
+    },
+    {
+      "say": "Cada máquina virtual opera em isolamento absoluto das demais no mesmo servidor. Se uma máquina convidada travar ou sofrer uma invasão, as outras instâncias vizinhas continuam seguras e totalmente operacionais.",
+      "scene": {
+        "title": "Barreira Rígida de Isolamento",
+        "nodes": [
+          {
+            "id": "wall",
+            "x": 80,
+            "y": 40,
+            "w": 30,
+            "h": 40,
+            "icon": "🧱",
+            "label": "Isolamento",
+            "sub": "hipervisor",
+            "color": "amber",
+            "on": "isolamento"
+          },
+          {
+            "id": "vm_bad",
+            "x": 28,
+            "y": 40,
+            "icon": "💥",
+            "label": "VM atacada",
+            "sub": "travou ou invadida",
+            "color": "rose",
+            "on": "travar"
+          },
+          {
+            "id": "vm_safe",
+            "x": 134,
+            "y": 40,
+            "icon": "✅",
+            "label": "VMs vizinhas",
+            "sub": "seguras",
+            "color": "green",
+            "on": "vizinhas"
+          }
+        ],
+        "arrows": [
+          {
+            "from": "vm_bad",
+            "to": "wall",
+            "label": "invasão",
+            "color": "rose",
+            "dashed": true,
+            "on": "invasão"
+          },
+          {
+            "from": "wall",
+            "to": "vm_safe",
+            "label": "contida",
+            "color": "green",
+            "on": "seguras"
+          }
+        ]
+      }
+    },
+    {
+      "say": "Outra vantagem crucial é a capacidade de criar snapshots e migrar instâncias completas. Podemos congelar o estado exato da memória e do disco, transferindo a máquina entre servidores sem perda de dados.",
+      "scene": {
+        "title": "Snapshots e Migração Dinâmica",
+        "nodes": [
+          {
+            "id": "snap",
+            "x": 28,
+            "y": 30,
+            "icon": "📸",
+            "label": "Snapshot",
+            "sub": "foto da VM",
+            "color": "blue",
+            "on": "snapshots"
+          },
+          {
+            "id": "state",
+            "x": 80,
+            "y": 30,
+            "icon": "🧊",
+            "label": "Estado\ncongelado",
+            "sub": "memória + disco",
+            "color": "cyan",
+            "on": "congelar"
+          },
+          {
+            "id": "dest",
+            "x": 132,
+            "y": 30,
+            "icon": "🖥️",
+            "label": "Outro\nservidor",
+            "sub": "VM retomada",
+            "color": "green",
+            "on": "servidores"
+          },
+          {
+            "id": "safe",
+            "x": 80,
+            "y": 58,
+            "icon": "🛡️",
+            "label": "Sem perda de dados",
+            "color": "amber",
+            "on": "perda",
+            "kind": "icon"
+          }
+        ],
+        "arrows": [
+          {
+            "from": "snap",
+            "to": "state",
+            "label": "congela",
+            "color": "cyan",
+            "on": "congelar"
+          },
+          {
+            "from": "state",
+            "to": "dest",
+            "label": "transfere",
+            "color": "green",
+            "on": "transferindo"
+          }
+        ]
+      }
+    },
+    {
+      "say": "Toda a computação em nuvem moderna foi construída sobre a base sólida da virtualização. Provedores globais como AWS e Google Cloud particionam supercomputadores em instâncias menores alugadas para empresas no mundo todo.",
+      "scene": {
+        "title": "A Infraestrutura da Nuvem Pública",
+        "nodes": [
+          {
+            "id": "datacenter",
+            "x": 28,
+            "y": 30,
+            "icon": "🏢",
+            "label": "Datacenter",
+            "sub": "supercomputadores",
+            "color": "slate",
+            "on": "supercomputadores"
+          },
+          {
+            "id": "hyper_cloud",
+            "x": 80,
+            "y": 30,
+            "icon": "🧠",
+            "label": "Hipervisor",
+            "sub": "particiona",
+            "color": "violet",
+            "on": "particionam"
+          },
+          {
+            "id": "ec2",
+            "x": 132,
+            "y": 30,
+            "icon": "📦",
+            "label": "Instâncias",
+            "sub": "menores e alugáveis",
+            "color": "green",
+            "on": "instâncias"
+          },
+          {
+            "id": "cloud",
+            "kind": "icon",
+            "x": 26,
+            "y": 58,
+            "icon": "☁️",
+            "label": "Nuvem",
+            "size": 3.4,
+            "color": "cyan",
+            "on": "nuvem"
+          },
+          {
+            "id": "aws",
+            "kind": "icon",
+            "x": 62,
+            "y": 58,
+            "icon": "🟧",
+            "label": "AWS",
+            "size": 3.4,
+            "color": "amber",
+            "on": "AWS"
+          },
+          {
+            "id": "gcp",
+            "kind": "icon",
+            "x": 98,
+            "y": 58,
+            "icon": "🔷",
+            "label": "Google Cloud",
+            "size": 3.4,
+            "color": "blue",
+            "on": "Google"
+          },
+          {
+            "id": "firms",
+            "kind": "icon",
+            "x": 134,
+            "y": 58,
+            "icon": "🏬",
+            "label": "Empresas",
+            "size": 3.4,
+            "color": "rose",
+            "on": "empresas"
+          }
+        ],
+        "arrows": [
+          {
+            "from": "datacenter",
+            "to": "hyper_cloud",
+            "label": "divide",
+            "color": "violet",
+            "on": "particionam"
+          },
+          {
+            "from": "hyper_cloud",
+            "to": "ec2",
+            "label": "aluga",
+            "color": "green",
+            "on": "alugadas"
+          }
+        ]
+      }
+    },
+    {
+      "say": "Porém, a virtualização completa exige recursos pesados do computador hospedeiro. Cada máquina virtual carrega seu próprio sistema operacional inteiro, consumindo gigabytes de memória RAM e sobrecarga constante de processamento na emulação.",
+      "scene": {
+        "title": "O Custo Operacional da Emulação",
+        "nodes": [
+          {
+            "id": "host_cost",
+            "kind": "icon",
+            "x": 80,
+            "y": 58,
+            "icon": "🖥️",
+            "label": "Hospedeiro sobrecarregado",
+            "size": 3.4,
+            "color": "amber",
+            "on": "recursos"
+          },
+          {
+            "id": "os_cost",
+            "x": 28,
+            "y": 31,
+            "icon": "💿",
+            "label": "SO inteiro",
+            "sub": "em cada VM",
+            "color": "amber",
+            "on": "sistema operacional"
+          },
+          {
+            "id": "ram_cost",
+            "x": 80,
+            "y": 31,
+            "icon": "🧠",
+            "label": "Gigabytes\nde RAM",
+            "sub": "memória",
+            "color": "rose",
+            "on": "gigabytes"
+          },
+          {
+            "id": "overhead",
+            "x": 132,
+            "y": 31,
+            "icon": "🔥",
+            "label": "Sobrecarga",
+            "sub": "emulação",
+            "color": "rose",
+            "on": "sobrecarga"
+          }
+        ],
+        "arrows": [
+          {
+            "from": "os_cost",
+            "to": "ram_cost",
+            "label": "consome",
+            "color": "amber",
+            "on": "consumindo"
+          },
+          {
+            "from": "ram_cost",
+            "to": "overhead",
+            "label": "e ainda",
+            "color": "rose",
+            "on": "constante"
+          }
+        ]
+      }
+    },
+    {
+      "say": "É comum confundir máquinas virtuais com contêineres, mas a arquitetura é radicalmente distinta. Enquanto a máquina virtual replica um sistema operacional inteiro, o contêiner compartilha o kernel hospedeiro com muito mais leveza.",
+      "scene": {
+        "title": "Comparativo: VM versus Contêiner",
+        "nodes": [
+          {
+            "id": "vm_ideal",
+            "x": 36,
+            "y": 27,
+            "icon": "💻",
+            "label": "Máquina virtual",
+            "sub": "pesada",
+            "color": "amber",
+            "on": "virtuais"
+          },
+          {
+            "id": "cont",
+            "x": 124,
+            "y": 27,
+            "icon": "📦",
+            "label": "Contêiner",
+            "sub": "leve",
+            "color": "green",
+            "on": "contêineres"
+          },
+          {
+            "id": "neq",
+            "kind": "text",
+            "x": 80,
+            "y": 27,
+            "label": "≠",
+            "size": 10,
+            "color": "rose",
+            "on": "distinta"
+          },
+          {
+            "id": "vm_detail",
+            "x": 36,
+            "y": 51,
+            "label": "App + SO inteiro",
+            "sub": "um SO por VM",
+            "size": 3.4,
+            "color": "amber",
+            "on": "replica"
+          },
+          {
+            "id": "cont_detail",
+            "x": 124,
+            "y": 51,
+            "label": "App + kernel do host",
+            "sub": "kernel compartilhado",
+            "size": 3.4,
+            "color": "green",
+            "on": "kernel"
+          },
+          {
+            "id": "light",
+            "kind": "text",
+            "x": 124,
+            "y": 64,
+            "label": "muito mais leveza",
+            "size": 3.4,
+            "color": "green",
+            "on": "leveza"
+          }
+        ],
+        "arrows": [
+          {
+            "from": "vm_ideal",
+            "to": "vm_detail",
+            "label": "replica",
+            "color": "amber",
+            "dashed": true,
+            "on": "replica"
+          },
+          {
+            "from": "cont",
+            "to": "cont_detail",
+            "label": "compartilha",
+            "color": "green",
+            "on": "compartilha"
+          }
+        ]
+      }
+    },
+    {
+      "say": "Portanto, use máquinas virtuais quando precisar de isolamento rigoroso de hardware ou kernels diferentes. Elas continuam sendo a espinha dorsal indispensável para segurança corporativa e infraestrutura crítica em ambientes em nuvem.",
+      "scene": {
+        "title": "Quando Escolher Máquinas Virtuais",
+        "nodes": [
+          {
+            "id": "security",
+            "x": 28,
+            "y": 31,
+            "icon": "🛡️",
+            "label": "Isolamento\nrigoroso",
+            "sub": "hardware separado",
+            "color": "green",
+            "on": "isolamento"
+          },
+          {
+            "id": "any_os",
+            "x": 80,
+            "y": 31,
+            "icon": "🐧",
+            "label": "Kernels\ndiferentes",
+            "sub": "Linux, Windows...",
+            "color": "cyan",
+            "on": "kernels"
+          },
+          {
+            "id": "enterprise",
+            "x": 132,
+            "y": 31,
+            "icon": "🏦",
+            "label": "Segurança\ncorporativa",
+            "sub": "infra crítica",
+            "color": "violet",
+            "on": "corporativa"
+          },
+          {
+            "id": "final_summary",
+            "x": 80,
+            "y": 58,
+            "icon": "☁️",
+            "label": "Espinha dorsal da nuvem",
+            "color": "amber",
+            "on": "espinha"
+          }
+        ],
+        "arrows": [
+          {
+            "from": "security",
+            "to": "final_summary",
+            "color": "green",
+            "on": "continuam"
+          },
+          {
+            "from": "any_os",
+            "to": "final_summary",
+            "color": "cyan",
+            "on": "dorsal"
+          },
+          {
+            "from": "enterprise",
+            "to": "final_summary",
+            "color": "violet",
+            "on": "indispensável"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,133 @@
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-ui: "Bricolage Grotesque", "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  body {
+    font-family: var(--font-ui);
+    background-color: #141417;
+    color: #c8c8d0;
+  }
+}
+
+/* Custom neutral gray scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(20, 20, 23, 0.8);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.26);
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.animate-caret {
+  animation: blink 0.85s steps(1) infinite;
+}
+
+@keyframes pulse-subtle {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.25);
+  }
+  50% {
+    transform: scale(1.06);
+    box-shadow: 0 0 12px 2px rgba(255, 255, 255, 0.35);
+  }
+}
+
+.animate-mark-pulse {
+  animation: pulse-subtle 1.4s ease-in-out infinite;
+}
+
+/* Explicode Logo animations */
+.pt {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes wave {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.18); }
+}
+
+.wv1 {
+  animation: wave 1.2s ease-in-out infinite;
+}
+
+.wv2 {
+  animation: wave 1.2s ease-in-out 0.3s infinite;
+}
+
+.breathe {
+  animation: breathe 1.6s ease-in-out infinite;
+}
+
+@keyframes part {
+  0%, 8% { opacity: 0.08; transform: translateY(0.5px); }
+  25%, 80% { opacity: 1; transform: none; }
+  100% { opacity: 0.08; transform: translateY(0.5px); }
+}
+
+.s1, .s2, .s3, .s4, .s5, .s6, .s7 {
+  animation: part 3.2s ease-in-out infinite;
+}
+.s2 { animation-delay: 0.2s; }
+.s3 { animation-delay: 0.4s; }
+.s4 { animation-delay: 0.6s; }
+.s5 { animation-delay: 0.8s; }
+.s6 { animation-delay: 1.0s; }
+.s7 { animation-delay: 1.2s; }
+
+@keyframes beatChev {
+  0%, 100% { opacity: 0.25; transform: translateX(0.5px); }
+  15%, 45% { opacity: 1; transform: none; }
+}
+
+@keyframes beatPlay {
+  0%, 20%, 100% { opacity: 0.25; transform: scale(0.85); }
+  35%, 60% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes beatVoice {
+  0%, 40%, 100% { opacity: 0.15; }
+  55%, 80% { opacity: 1; }
+}
+
+.bc {
+  animation: beatChev 3s ease-in-out infinite;
+}
+.bp {
+  animation: beatPlay 3s ease-in-out infinite;
+}
+.bv {
+  animation: beatVoice 3s ease-in-out infinite;
+}
+.bv2 {
+  animation-delay: 0.2s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wv1, .wv2, .breathe, .s1, .s2, .s3, .s4, .s5, .s6, .s7, .bc, .bp, .bv {
+    animation: none;
+  }
+}
