@@ -32,6 +32,7 @@ import {
   Video,
   FileText,
   ChevronRight,
+  ChevronDown,
   SkipBack,
   SkipForward,
   KeyRound,
@@ -49,7 +50,9 @@ import {
   FolderCode,
   Target,
   MousePointerClick,
+  MonitorPlay,
 } from 'lucide-react';
+import { SoaraLogo } from '@/components/SoaraLogo';
 import {
   CodeScript,
   AspectRatioType,
@@ -308,9 +311,26 @@ export default function HomePage() {
   const [aspectRatio, setAspectRatio] = useState<AspectRatioType>('16x9');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
 
+  // Collapsed explanation state for message cards (collapsed by default)
+  const [expandedExplanations, setExpandedExplanations] = useState<Record<string, boolean>>({});
+
+  const toggleExplanation = useCallback((msgId: string) => {
+    setExpandedExplanations((prev) => ({
+      ...prev,
+      [msgId]: !prev[msgId],
+    }));
+  }, []);
+
   // Layout presentation modes & Fullscreen state
-  const [layoutMode, setLayoutMode] = useState<'standard' | 'video-right' | 'script-right'>('standard');
+  const [layoutMode, setLayoutMode] = useState<
+    'standard' | 'video-right' | 'script-right' | 'presentation'
+  >('standard');
+  const previousLayoutModeRef = useRef<'standard' | 'video-right' | 'script-right'>('standard');
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Presentation Mode auto-hiding controls timer
+  const [isPresentationControlsVisible, setIsPresentationControlsVisible] = useState(true);
+  const presentationControlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const toggleFullscreen = useCallback(() => {
     if (typeof document === 'undefined') return;
@@ -1796,8 +1816,394 @@ export default function HomePage() {
     [stopAll, resetStageVisuals]
   );
 
+  const handlePresentationActivity = useCallback(() => {
+    setIsPresentationControlsVisible(true);
+    if (presentationControlsTimeoutRef.current) {
+      clearTimeout(presentationControlsTimeoutRef.current);
+    }
+    if (isPlaying) {
+      presentationControlsTimeoutRef.current = setTimeout(() => {
+        setIsPresentationControlsVisible(false);
+      }, 2800);
+    }
+  }, [isPlaying]);
+
+  const enterPresentationMode = useCallback(
+    (msgId?: string) => {
+      const targetId = msgId || activeMessageId || (messages.length > 0 ? messages[0].id : null);
+      if (targetId && targetId !== activeMessageId) {
+        handleSelectSession(targetId);
+      }
+      if (layoutMode !== 'presentation') {
+        previousLayoutModeRef.current = layoutMode;
+      }
+      setLayoutMode('presentation');
+      setIsPresentationControlsVisible(true);
+    },
+    [activeMessageId, handleSelectSession, layoutMode, messages]
+  );
+
+  const exitPresentationMode = useCallback(() => {
+    setLayoutMode(previousLayoutModeRef.current || 'standard');
+  }, []);
+
+  // Global keyboard shortcuts (Presentation mode: Space, Left/Right arrows, Esc, P, R, M)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isTyping =
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable);
+
+      if (e.key === 'Escape' && layoutMode === 'presentation') {
+        e.preventDefault();
+        exitPresentationMode();
+        return;
+      }
+
+      if (isTyping) return;
+
+      if (e.key === 'p' || e.key === 'P') {
+        e.preventDefault();
+        if (layoutMode === 'presentation') {
+          exitPresentationMode();
+        } else {
+          enterPresentationMode();
+        }
+        return;
+      }
+
+      if (layoutMode === 'presentation') {
+        const presMsg =
+          (activeMessageId ? messages.find((m) => m.id === activeMessageId) : null) ||
+          messages[0] ||
+          null;
+        if (!presMsg) return;
+
+        if (e.code === 'Space') {
+          e.preventDefault();
+          handleTogglePlayForMessage(presMsg);
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          const nextIdx = currentSegmentIndex + 1;
+          if (nextIdx < presMsg.script.segments.length) {
+            playFromForMessage(presMsg, nextIdx);
+          }
+        } else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          const prevIdx = Math.max(0, currentSegmentIndex - 1);
+          playFromForMessage(presMsg, prevIdx);
+        } else if (e.key === 'r' || e.key === 'R') {
+          e.preventDefault();
+          playFromForMessage(presMsg, 0);
+        } else if (e.key === 'm' || e.key === 'M') {
+          e.preventDefault();
+          setVoiceEnabled((v) => !v);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [
+    layoutMode,
+    activeMessageId,
+    messages,
+    currentSegmentIndex,
+    exitPresentationMode,
+    enterPresentationMode,
+    handleTogglePlayForMessage,
+    playFromForMessage,
+  ]);
+
+  const presentationTargetMessage =
+    (activeMessageId ? messages.find((m) => m.id === activeMessageId) : null) ||
+    messages[0] ||
+    null;
+
+  const presSegIdx =
+    presentationTargetMessage && activeMessageId === presentationTargetMessage.id
+      ? currentSegmentIndex
+      : 0;
+  const presSegProg =
+    presentationTargetMessage && activeMessageId === presentationTargetMessage.id
+      ? (segmentProgress[presSegIdx] ?? 0)
+      : 0;
+  const presTiming = presentationTargetMessage
+    ? getScriptTiming(presentationTargetMessage.script, presSegIdx, presSegProg)
+    : { elapsed: 0, total: 0, elapsedFormatted: '0:00', totalFormatted: '0:00' };
+  const presCaption = presentationTargetMessage
+    ? captionText || presentationTargetMessage.script.segments[presSegIdx]?.say || ''
+    : '';
+
   return (
-    <div className="min-h-screen bg-[#141417] text-zinc-300 flex flex-col selection:bg-white/15 selection:text-zinc-200">
+    <>
+      {layoutMode === 'presentation' && presentationTargetMessage ? (
+        <div
+          onMouseMove={handlePresentationActivity}
+          className="fixed inset-0 z-50 bg-[#07080c] flex flex-col justify-between overflow-hidden select-none"
+        >
+          {/* Top Presentation Bar (Auto-hiding on playback inactivity) */}
+          <div
+            className={`px-4 sm:px-6 py-3.5 flex items-center justify-between z-20 backdrop-blur-md bg-black/60 border-b border-white/10 transition-opacity duration-300 ${
+              isPresentationControlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-white/[0.06] border border-white/15 flex items-center justify-center">
+                <SoaraLogo variant="waves" className="w-5 h-5 text-sky-400" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-sm text-zinc-100 tracking-tight">
+                    {presentationTargetMessage.script.title || 'Soara'}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                    Modo Apresentação
+                  </span>
+                </div>
+                <span className="text-[11px] text-zinc-400 font-mono">
+                  {presentationTargetMessage.script.file || 'codigo.ts'} ·{' '}
+                  {presentationTargetMessage.script.segments.length} trechos
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Aspect Ratio Switcher */}
+              <div className="flex items-center p-0.5 rounded-lg bg-white/[0.05] border border-white/10 text-xs">
+                {(['16x9', '9x16', '1x1'] as AspectRatioType[]).map((ratio) => (
+                  <button
+                    key={ratio}
+                    type="button"
+                    onClick={() => setAspectRatio(ratio)}
+                    className={`px-2.5 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer ${
+                      aspectRatio === ratio
+                        ? 'bg-white/20 text-white font-semibold shadow-sm'
+                        : 'text-zinc-400 hover:text-zinc-200'
+                    }`}
+                  >
+                    {ratio}
+                  </button>
+                ))}
+              </div>
+
+              {/* Browser Fullscreen Toggle */}
+              <button
+                type="button"
+                onClick={toggleFullscreen}
+                className="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/15 text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                title={isFullscreen ? 'Sair da tela cheia do navegador' : 'Tela cheia do navegador'}
+              >
+                {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              </button>
+
+              {/* Exit Presentation Button */}
+              <button
+                type="button"
+                onClick={exitPresentationMode}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/[0.12] hover:bg-white/[0.2] border border-white/20 text-xs font-semibold text-zinc-100 transition-all cursor-pointer shadow-lg"
+                title="Sair do modo de apresentação (Esc)"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Sair</span>
+                <kbd className="hidden sm:inline-block px-1.5 py-0.5 rounded bg-black/40 border border-white/20 text-[10px] font-mono text-zinc-400">
+                  Esc
+                </kbd>
+              </button>
+            </div>
+          </div>
+
+          {/* Center: Fullscreen Video Stage (No edit controls, expanded to occupy the screen) */}
+          <div
+            onClick={() => handleTogglePlayForMessage(presentationTargetMessage)}
+            className="flex-1 w-full flex items-center justify-center p-2 sm:p-6 overflow-hidden cursor-pointer relative"
+          >
+            <div
+              className="w-full h-full flex items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <VideoStage
+                script={presentationTargetMessage.script}
+                theme={effectiveTheme}
+                aspectRatio={aspectRatio}
+                isPlaying={isPlaying}
+                currentSegmentIndex={presSegIdx}
+                lineVisibilities={
+                  activeMessageId === presentationTargetMessage.id
+                    ? lineVisibilities
+                    : presentationTargetMessage.script.code.map((l) => l.length)
+                }
+                caretLine={activeMessageId === presentationTargetMessage.id ? caretLine : -1}
+                focusRange={focusRange}
+                markInfo={markInfo}
+                outputValue={outputValue}
+                captionText={presCaption}
+                scene={
+                  isPlaying
+                    ? presentationTargetMessage.script.segments[presSegIdx]?.scene ?? null
+                    : presentationTargetMessage.script.code.length === 0
+                    ? presentationTargetMessage.script.segments[presSegIdx]?.scene ?? null
+                    : null
+                }
+                sceneKey={presSegIdx}
+                sceneProgress={presSegProg}
+                onPlayClick={() => handleTogglePlayForMessage(presentationTargetMessage)}
+                focusMode="auto"
+                isPresentation={true}
+              />
+            </div>
+          </div>
+
+          {/* Bottom: Floating Presentation Controls (Auto-hiding on playback inactivity) */}
+          <div
+            className={`px-4 sm:px-8 py-3.5 flex flex-col gap-2.5 z-20 backdrop-blur-md bg-black/60 border-t border-white/10 transition-opacity duration-300 ${
+              isPresentationControlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}
+          >
+            {/* Segment Scrubber */}
+            <div className="flex items-center gap-1.5 w-full">
+              {presentationTargetMessage.script.segments.map((seg, sIndex) => {
+                const fill =
+                  sIndex < presSegIdx
+                    ? 100
+                    : sIndex === presSegIdx
+                    ? Math.round(presSegProg * 100)
+                    : 0;
+                return (
+                  <button
+                    key={sIndex}
+                    type="button"
+                    onClick={() => playFromForMessage(presentationTargetMessage, sIndex)}
+                    title={`Trecho ${sIndex + 1}: ${seg.say}`}
+                    className="group flex-1 h-2 rounded-full bg-white/[0.1] hover:bg-white/[0.2] overflow-hidden cursor-pointer relative transition-all"
+                  >
+                    <div
+                      className="h-full bg-sky-400 transition-all duration-100 ease-linear rounded-full"
+                      style={{ width: `${fill}%` }}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Control Buttons Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
+              {/* Left: Playback controls */}
+              <div className="flex items-center gap-2 sm:gap-3">
+                {/* Previous Segment */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const prev = Math.max(0, presSegIdx - 1);
+                    playFromForMessage(presentationTargetMessage, prev);
+                  }}
+                  disabled={presSegIdx === 0}
+                  className="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] disabled:opacity-30 disabled:pointer-events-none border border-white/15 text-zinc-200 transition-colors cursor-pointer"
+                  title="Trecho anterior (←)"
+                >
+                  <SkipBack className="w-4 h-4" />
+                </button>
+
+                {/* Big Play / Pause */}
+                <button
+                  type="button"
+                  onClick={() => handleTogglePlayForMessage(presentationTargetMessage)}
+                  className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-white/[0.14] hover:bg-white/[0.22] border border-white/25 text-white font-semibold shadow-lg transition-all cursor-pointer"
+                  title={isPlaying ? 'Pausar (Espaço)' : 'Apresentar (Espaço)'}
+                >
+                  {isPlaying ? (
+                    <>
+                      <Pause className="w-4 h-4 fill-current" />
+                      <span>Pausar</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-4 h-4 fill-current" />
+                      <span>Apresentar</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Next Segment */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = presSegIdx + 1;
+                    if (next < presentationTargetMessage.script.segments.length) {
+                      playFromForMessage(presentationTargetMessage, next);
+                    }
+                  }}
+                  disabled={presSegIdx >= presentationTargetMessage.script.segments.length - 1}
+                  className="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] disabled:opacity-30 disabled:pointer-events-none border border-white/15 text-zinc-200 transition-colors cursor-pointer"
+                  title="Próximo trecho (→)"
+                >
+                  <SkipForward className="w-4 h-4" />
+                </button>
+
+                {/* Restart */}
+                <button
+                  type="button"
+                  onClick={() => playFromForMessage(presentationTargetMessage, 0)}
+                  className="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/15 text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                  title="Reiniciar do começo (R)"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </button>
+
+                {/* Timer Display */}
+                <div className="font-mono text-zinc-300 text-xs ml-1 font-medium">
+                  <span>{formatSeconds(presTiming.elapsed)}</span>
+                  <span className="text-zinc-500 mx-1">/</span>
+                  <span className="text-zinc-400">{formatSeconds(presTiming.total)}</span>
+                </div>
+              </div>
+
+              {/* Right: Audio toggle & Presentation keyboard hint */}
+              <div className="flex items-center gap-3">
+                {/* Audio Narration Toggle */}
+                <button
+                  type="button"
+                  onClick={() => setVoiceEnabled((v) => !v)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-colors cursor-pointer ${
+                    voiceEnabled
+                      ? 'bg-sky-500/15 border-sky-500/30 text-sky-200'
+                      : 'bg-white/[0.06] border-white/15 text-zinc-400 hover:text-zinc-200'
+                  }`}
+                  title="Ativar/Desativar Narração de Voz (M)"
+                >
+                  {voiceEnabled ? (
+                    <Volume2 className="w-3.5 h-3.5" />
+                  ) : (
+                    <VolumeX className="w-3.5 h-3.5" />
+                  )}
+                  <span className="hidden sm:inline">
+                    {voiceEnabled
+                      ? `Narração: ${
+                          voiceMode === 'gemini-tts' ? `IA (${geminiVoice})` : 'Navegador'
+                        }`
+                      : 'Voz Desativada'}
+                  </span>
+                </button>
+
+                {/* Keyboard hints badge */}
+                <div className="hidden lg:flex items-center gap-2 text-[11px] text-zinc-400 bg-white/[0.04] border border-white/10 px-3 py-1.5 rounded-xl">
+                  <span>Espaço: Play/Pausa</span>
+                  <span>·</span>
+                  <span>← →: Trechos</span>
+                  <span>·</span>
+                  <span>Esc: Sair</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="min-h-screen bg-[#141417] text-zinc-300 flex flex-col selection:bg-white/15 selection:text-zinc-200">
       {/* Top Chat Header — Dark gray & translucent gray */}
       <header className="sticky top-0 z-40 bg-[#18181c]/85 backdrop-blur-md border-b border-white/10 px-4 sm:px-6 py-3 flex items-center justify-between">
         {/* Left: Sidebar Toggle + Translucent Gray AI Avatar + Brand Name + Subtitle */}
@@ -1874,6 +2280,19 @@ export default function HomePage() {
             >
               <FileText className="w-3.5 h-3.5" />
               <span className="hidden md:inline">Roteiro à Direita</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => enterPresentationMode()}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer ${
+                layoutMode === 'presentation'
+                  ? 'bg-sky-500/20 text-sky-200 border border-sky-400/30 shadow-sm font-semibold'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+              title="Modo de Apresentação (Tela cheia sem chat e sem controles de edição - Atalho: P)"
+            >
+              <MonitorPlay className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Apresentação</span>
             </button>
           </div>
 
@@ -2160,6 +2579,7 @@ export default function HomePage() {
           const timing = getScriptTiming(msg.script, segIdx, segProg);
           const article = buildStructuredExplanation(msg.script);
           const sceneCount = msg.script.segments.filter((s) => s.scene).length;
+          const isExplanationExpanded = Boolean(expandedExplanations[msg.id]);
 
           // Compute idle line visibilities (all code lines visible when paused/idle)
           const msgLineVisibilities = isCurrentActive
@@ -2228,49 +2648,81 @@ export default function HomePage() {
                     </span>
                   </div>
 
-                  {/* Structured Explanation */}
-                  <div className="space-y-4 text-zinc-300">
-                    <h2 className="text-lg sm:text-xl font-bold text-zinc-200 tracking-tight">
-                      {article.heading}
-                    </h2>
-
-                    <p className="text-sm sm:text-[15px] text-zinc-300 leading-relaxed">
-                      {article.intro}
-                    </p>
-
-                    {/* Numbered "Como ele funciona?" section */}
-                    <div className="space-y-2.5 pt-1">
-                      <h3 className="text-base font-bold text-zinc-200">Como ele funciona?</h3>
-                      <div className="space-y-2">
-                        {article.steps.map((stepText, idx) => (
-                          <div key={idx} className="flex items-start gap-3 text-sm text-zinc-300">
-                            <span className="w-5 h-5 rounded-full bg-white/[0.08] border border-white/15 text-zinc-300 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
-                              {idx + 1}
-                            </span>
-                            <span className="leading-relaxed">{stepText}</span>
-                          </div>
-                        ))}
+                  {/* Structured Explanation (Collapsed by default, expandable manually) */}
+                  <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4 text-zinc-300 transition-colors">
+                    <button
+                      type="button"
+                      onClick={() => toggleExplanation(msg.id)}
+                      className="w-full flex items-center justify-between gap-3 text-left cursor-pointer group"
+                      aria-expanded={isExplanationExpanded}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-white/[0.05] border border-white/10 flex items-center justify-center shrink-0 text-zinc-400 group-hover:text-zinc-200 group-hover:bg-white/[0.08] transition-colors">
+                          <AlignLeft className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <h2 className="text-base sm:text-lg font-bold text-zinc-200 tracking-tight truncate group-hover:text-white transition-colors">
+                            {article.heading}
+                          </h2>
+                          <span className="text-xs text-zinc-500 block truncate">
+                            {isExplanationExpanded
+                              ? 'Clique para recolher o texto explicativo'
+                              : 'Explicação teórica estruturada · Clique para expandir'}
+                          </span>
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Checkmarks "Pontos principais do vídeo" section */}
-                    <div className="space-y-2.5 pt-1">
-                      <h3 className="text-base font-bold text-zinc-200">Pontos principais do vídeo</h3>
-                      <div className="space-y-2">
-                        {article.highlights.map((item, idx) => (
-                          <div key={idx} className="flex items-start gap-3 text-sm text-zinc-300">
-                            <span className="w-5 h-5 rounded-full bg-white/[0.08] border border-white/15 text-zinc-300 flex items-center justify-center shrink-0 mt-0.5">
-                              <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                            </span>
-                            <span className="leading-relaxed">{item}</span>
-                          </div>
-                        ))}
+                      <div className="flex items-center gap-1.5 shrink-0 px-2.5 py-1.5 rounded-lg bg-white/[0.05] group-hover:bg-white/[0.1] border border-white/10 text-xs font-medium text-zinc-300 transition-all">
+                        <span>{isExplanationExpanded ? 'Recolher' : 'Expandir'}</span>
+                        <ChevronDown
+                          className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                            isExplanationExpanded ? 'rotate-180 text-zinc-200' : 'text-zinc-400'
+                          }`}
+                        />
                       </div>
-                    </div>
+                    </button>
 
-                    <p className="text-sm text-zinc-300 leading-relaxed pt-1">
-                      {article.conclusion}
-                    </p>
+                    {isExplanationExpanded && (
+                      <div className="space-y-4 pt-4 border-t border-white/10 mt-3 text-zinc-300 animate-fade-in">
+                        <p className="text-sm sm:text-[15px] text-zinc-300 leading-relaxed">
+                          {article.intro}
+                        </p>
+
+                        {/* Numbered "Como ele funciona?" section */}
+                        <div className="space-y-2.5 pt-1">
+                          <h3 className="text-base font-bold text-zinc-200">Como ele funciona?</h3>
+                          <div className="space-y-2">
+                            {article.steps.map((stepText, idx) => (
+                              <div key={idx} className="flex items-start gap-3 text-sm text-zinc-300">
+                                <span className="w-5 h-5 rounded-full bg-white/[0.08] border border-white/15 text-zinc-300 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                                  {idx + 1}
+                                </span>
+                                <span className="leading-relaxed">{stepText}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Checkmarks "Pontos principais do vídeo" section */}
+                        <div className="space-y-2.5 pt-1">
+                          <h3 className="text-base font-bold text-zinc-200">Pontos principais do vídeo</h3>
+                          <div className="space-y-2">
+                            {article.highlights.map((item, idx) => (
+                              <div key={idx} className="flex items-start gap-3 text-sm text-zinc-300">
+                                <span className="w-5 h-5 rounded-full bg-white/[0.08] border border-white/15 text-zinc-300 flex items-center justify-center shrink-0 mt-0.5">
+                                  <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                                </span>
+                                <span className="leading-relaxed">{item}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <p className="text-sm text-zinc-300 leading-relaxed pt-1">
+                          {article.conclusion}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {/* JSON Generation / Approval / Show-Hide Control Bar */}
@@ -2677,6 +3129,16 @@ export default function HomePage() {
 
                               <button
                                 type="button"
+                                onClick={() => enterPresentationMode(msg.id)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 border border-sky-400/30 text-sky-200 font-semibold text-[11px] transition-colors cursor-pointer"
+                                title="Entrar no Modo de Apresentação (Tela cheia sem chat e sem controles de edição)"
+                              >
+                                <MonitorPlay className="w-3.5 h-3.5" />
+                                <span className="hidden sm:inline">Apresentar</span>
+                              </button>
+
+                              <button
+                                type="button"
                                 onClick={() => {
                                   stopAll();
                                   setActiveMessageId(msg.id);
@@ -3049,6 +3511,14 @@ export default function HomePage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => enterPresentationMode(activeMessage?.id)}
+                    className="p-1.5 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 border border-sky-400/30 text-sky-200 cursor-pointer"
+                    title="Modo de Apresentação (Tela cheia)"
+                  >
+                    <MonitorPlay className="w-3.5 h-3.5" />
+                  </button>
                   <button
                     type="button"
                     onClick={toggleFullscreen}
@@ -4039,5 +4509,7 @@ export default function HomePage() {
         geminiVoice={geminiVoice}
       />
     </div>
+      )}
+    </>
   );
 }

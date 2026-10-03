@@ -29,6 +29,8 @@ interface VideoStageProps {
   onLineClick?: (lineIndex: number, shiftKey: boolean) => void;
   onToggleFocusMode?: () => void;
   onClearManualFocus?: () => void;
+  isPresentation?: boolean;
+  className?: string;
 }
 
 export function VideoStage({
@@ -51,6 +53,8 @@ export function VideoStage({
   onLineClick,
   onToggleFocusMode,
   onClearManualFocus,
+  isPresentation = false,
+  className = '',
 }: VideoStageProps) {
   // If script has no code (conceptual mode), always show the current/first segment's visual scene even when idle
   const effectiveScene =
@@ -75,11 +79,17 @@ export function VideoStage({
   }, [script.code]);
 
   // Container aspect ratio class
-  const ratioClasses = {
-    '16x9': 'w-full aspect-[16/9] max-w-[920px]',
-    '9x16': 'w-full max-w-[380px] aspect-[9/16] mx-auto',
-    '1x1': 'w-full max-w-[560px] aspect-square mx-auto',
-  }[aspectRatio];
+  const ratioClasses = isPresentation
+    ? {
+        '16x9': 'w-full max-w-[94vw] h-full max-h-[82vh] aspect-[16/9] mx-auto',
+        '9x16': 'h-full max-h-[86vh] aspect-[9/16] mx-auto w-auto',
+        '1x1': 'h-full max-h-[82vh] aspect-square mx-auto w-auto',
+      }[aspectRatio]
+    : {
+        '16x9': 'w-full aspect-[16/9] max-w-[920px]',
+        '9x16': 'w-full max-w-[380px] aspect-[9/16] mx-auto',
+        '1x1': 'w-full max-w-[560px] aspect-square mx-auto',
+      }[aspectRatio];
 
   // Calculate focus box geometry based on line height (1.7em)
   const focusGeometry = useMemo(() => {
@@ -94,7 +104,7 @@ export function VideoStage({
   return (
     <div
       id="video-stage"
-      className={`relative select-none rounded-2xl overflow-hidden shadow-2xl transition-all duration-300 border border-white/10 flex flex-col justify-between ${ratioClasses}`}
+      className={`relative select-none rounded-2xl overflow-hidden shadow-2xl transition-all duration-300 border border-white/10 flex flex-col justify-between ${ratioClasses} ${className}`}
       style={{
         background: theme.bgGradient,
         color: theme.codeText,
@@ -120,7 +130,7 @@ export function VideoStage({
           </span>
 
           {/* Quick Focus Mode Badge / Button */}
-          {onToggleFocusMode && !effectiveScene && (
+          {onToggleFocusMode && !effectiveScene && !isPresentation && (
             <div className="flex items-center gap-1.5 ml-2">
               <button
                 type="button"
@@ -230,6 +240,7 @@ export function VideoStage({
               <div
                 key={idx}
                 onClick={(e) => {
+                  if (isPresentation) return;
                   if (onLineClick) {
                     onLineClick(idx, e.shiftKey);
                   }
