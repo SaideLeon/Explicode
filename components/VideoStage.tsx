@@ -171,7 +171,7 @@ export function VideoStage({
         <div className="flex items-center gap-1.5 text-right">
           <ExplicodeLogo variant="waves" className="w-3.5 h-3.5 text-sky-400 shrink-0" />
           <span className="text-[11px] font-medium opacity-85 truncate max-w-[280px]">
-            {script.title || 'Explicode'}
+            {script.title || 'Soara'}
           </span>
         </div>
       </div>

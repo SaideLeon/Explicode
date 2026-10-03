@@ -220,7 +220,7 @@ export async function renderScriptToVideoBlob(
     sCtx.fillStyle = theme.headerText || '#94a3b8';
     sCtx.font = '600 12.5px "Plus Jakarta Sans", sans-serif';
     sCtx.textAlign = 'right';
-    sCtx.fillText(script.title || 'Explicode', marginX + windowWidth - 22, dotsY + 4.5);
+    sCtx.fillText(script.title || 'Soara', marginX + windowWidth - 22, dotsY + 4.5);
     sCtx.textAlign = 'left';
 
     // 5. Subtitle Footer Bar Background
@@ -518,7 +518,7 @@ export async function renderScriptToVideoBlob(
 
       ctx.fillStyle = theme.accent || '#38bdf8';
       ctx.font = '700 11px "JetBrains Mono", monospace';
-      ctx.fillText('EXPLICODE', cardX + 16, cardY + 19);
+      ctx.fillText('SOARA', cardX + 16, cardY + 19);
 
       ctx.fillStyle = '#ffffff';
       ctx.font = '600 13px "Plus Jakarta Sans", sans-serif';

@@ -44,7 +44,7 @@ export function ExplicodeLogo({
   progress = 0,
   className = 'w-6 h-6',
   size,
-  title = 'Explicode',
+  title = 'Soara',
 }: ExplicodeLogoProps) {
   const clipId = useId();
   const safeProgress = Math.max(0, Math.min(1, progress));
@@ -175,3 +175,7 @@ export function ExplicodeLogo({
     </svg>
   );
 }
+
+export const SoaraLogo = ExplicodeLogo;
+export type SoaraLogoProps = ExplicodeLogoProps;
+

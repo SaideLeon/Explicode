@@ -115,7 +115,7 @@ export function ExportModal({
           <div className="flex items-center gap-2.5">
             <ExplicodeLogo variant="waves" className="w-6 h-6 text-sky-400" />
             <h3 className="font-semibold text-base text-zinc-100">
-              Explicode · Exportar Vídeo com Áudio
+              Soara · Exportar Vídeo com Áudio
             </h3>
           </div>
           <button
@@ -134,7 +134,7 @@ export function ExportModal({
         {!generatedVideoUrl && !isRendering && (
           <div className="flex flex-col gap-3.5">
             <p className="text-xs text-zinc-400 leading-relaxed">
-              O Explicode renderiza as animações de código, digitação e destaques visuais sincronizados diretamente com a narração em voz de alta definição, empacotando tudo em um único arquivo de vídeo.
+              O Soara renderiza as animações de código, digitação e destaques visuais sincronizados diretamente com a narração em voz de alta definição, empacotando tudo em um único arquivo de vídeo.
             </p>
 
             {/* Format selection */}

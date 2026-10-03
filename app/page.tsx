@@ -107,7 +107,7 @@ const INITIAL_NATIVE_SESSIONS: ChatVideoMessage[] = [
     jsonText: JSON.stringify(PRESETS[0].script, null, 2),
     isJsonVisible: false,
     isApproved: true,
-    modelUsed: 'Explicode · Preset Auditoria de Segurança',
+    modelUsed: 'Soara · Preset Auditoria de Segurança',
     isNative: true,
   },
   {
@@ -119,7 +119,7 @@ const INITIAL_NATIVE_SESSIONS: ChatVideoMessage[] = [
     jsonText: JSON.stringify(PRESETS[1].script, null, 2),
     isJsonVisible: false,
     isApproved: true,
-    modelUsed: 'Explicode · Preset Tutorial e Comparação',
+    modelUsed: 'Soara · Preset Tutorial e Comparação',
     isNative: true,
   },
   {
@@ -130,7 +130,7 @@ const INITIAL_NATIVE_SESSIONS: ChatVideoMessage[] = [
     jsonText: JSON.stringify(PRESETS[2].script, null, 2),
     isJsonVisible: false,
     isApproved: true,
-    modelUsed: 'Explicode · Modo Conceitual',
+    modelUsed: 'Soara · Modo Conceitual',
     isNative: true,
   },
 ];
@@ -705,8 +705,8 @@ export default function HomePage() {
     try {
       const testPhrase =
         selectedLanguage === 'pt-PT'
-          ? `Olá! Esta é a síntese de voz do Explicode com o perfil ${geminiVoice}.`
-          : `Olá! Esta é a narração por inteligência artificial do Explicode usando a voz ${geminiVoice}.`;
+          ? `Olá! Esta é a síntese de voz do Soara com o perfil ${geminiVoice}.`
+          : `Olá! Esta é a narração por inteligência artificial do Soara usando a voz ${geminiVoice}.`;
       const key = `${geminiVoice}::${selectedLanguage}::${testPhrase}`;
       let audioUrl = globalAudioCache.get(key);
 
@@ -1826,7 +1826,7 @@ export default function HomePage() {
             </div>
             <div>
               <div className="flex items-center gap-1 text-base sm:text-lg font-bold tracking-tight leading-none">
-                <span className="text-zinc-100">Explicode</span>
+                <span className="text-zinc-100">Soara</span>
               </div>
             </div>
           </button>
@@ -2142,7 +2142,7 @@ export default function HomePage() {
 
                 <div className="space-y-2">
                   <h1 className="text-xl sm:text-2xl font-bold text-zinc-200 tracking-tight">
-                    Explicode · Estúdio de Vídeos de Código
+                    Soara · Estúdio de Vídeos de Código
                   </h1>
                   <p className="text-sm text-zinc-400 leading-relaxed">
                     Envie um tema, cole um código ou faça upload de imagens abaixo para gerar uma nova sessão, ou clique em qualquer sessão no{' '}
@@ -2217,7 +2217,7 @@ export default function HomePage() {
                   {/* Bubble Header */}
                   <div className="flex items-center justify-between gap-2 text-xs">
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold text-zinc-300">Explicode</span>
+                      <span className="font-semibold text-zinc-300">Soara</span>
                       <span className="text-zinc-500">{msg.timestamp}</span>
                       {msg.modelUsed && (
                         <span className="text-[11px] text-zinc-500">· {msg.modelUsed}</span>

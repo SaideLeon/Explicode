@@ -438,7 +438,7 @@ export async function POST(req: NextRequest) {
       : 'A narração DEVE ser em Português do Brasil (use construções naturais como: tela, arquivo, usuário, código, terminal).';
 
     // Default code-explanation systemPrompt
-    let systemPrompt = `Você é um diretor sênior de conteúdo educacional de tecnologia e engenharia de software no Explicode. Sua missão é criar roteiros completos, altamente dinâmicos e visualmente ricos para vídeos explicativos em formato curto (Shorts, Reels, TikTok e YouTube), com duração alvo de ${durationInfo.estimatedSec} (${durationInfo.totalWordsDesc}).
+    let systemPrompt = `Você é um diretor sênior de conteúdo educacional de tecnologia e engenharia de software no Soara. Sua missão é criar roteiros completos, altamente dinâmicos e visualmente ricos para vídeos explicativos em formato curto (Shorts, Reels, TikTok e YouTube), com duração alvo de ${durationInfo.estimatedSec} (${durationInfo.totalWordsDesc}).
 
 ${langGuide}
 
@@ -480,7 +480,7 @@ ${SCENE_PROMPT_DOC}`;
 
     // When `mode === 'concept'`, completely overwrite `systemPrompt` so it focuses 100% on theoretical explanations and visual scenes
     if (mode === 'concept') {
-      systemPrompt = `Você é um diretor sênior de ensino de tecnologia, infraestrutura e arquitetura de sistemas no Explicode. Sua missão é criar roteiros visuais profundos e altamente didáticos que explicam CONCEITOS e TECNOLOGIAS exclusivamente por meio de explicações teóricas dinâmicas e cenas visuais animadas ("scene") sincronizadas palavra a palavra com a fala ("on"), com duração alvo de ${durationInfo.estimatedSec} (${durationInfo.totalWordsDesc}).
+      systemPrompt = `Você é um diretor sênior de ensino de tecnologia, infraestrutura e arquitetura de sistemas no Soara. Sua missão é criar roteiros visuais profundos e altamente didáticos que explicam CONCEITOS e TECNOLOGIAS exclusivamente por meio de explicações teóricas dinâmicas e cenas visuais animadas ("scene") sincronizadas palavra a palavra com a fala ("on"), com duração alvo de ${durationInfo.estimatedSec} (${durationInfo.totalWordsDesc}).
 
 ${langGuide}
 
