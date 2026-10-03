@@ -24,7 +24,12 @@ export async function POST(req: NextRequest) {
     tempInputDir = path.join(os.tmpdir(), `video_convert_${uniqueId}`);
     await fs.mkdir(tempInputDir, { recursive: true });
 
-    const inputPath = path.join(tempInputDir, 'input.webm');
+    // O Chrome/Android grava MP4 fragmentado (sem duração total no cabeçalho).
+    // Detectamos o contentor real para fazer remux (rápido) em vez de re-encode.
+    const isMp4Input =
+      (videoFile.type || '').includes('mp4') ||
+      (buffer.length > 12 && buffer.subarray(4, 8).toString('ascii') === 'ftyp');
+    const inputPath = path.join(tempInputDir, isMp4Input ? 'input.mp4' : 'input.webm');
     const outputPath = path.join(tempInputDir, 'output.mp4');
 
     await fs.writeFile(inputPath, buffer);
@@ -33,10 +38,25 @@ export async function POST(req: NextRequest) {
     // -tune animation preserves vector graphics, crisp code text edges and moving arrows,
     // while -preset veryfast delivers significantly higher quality than ultrafast with safe memory usage.
     await new Promise<void>((resolve, reject) => {
-      const ffmpeg = spawn('/usr/bin/ffmpeg', [
+      const remuxArgs = [
+        '-y',
+        '-fflags',
+        '+genpts',
+        '-i',
+        inputPath,
+        '-c',
+        'copy',
+        '-movflags',
+        '+faststart',
+        outputPath,
+      ];
+
+      const reencodeArgs = [
         '-y',
         '-threads',
         '2',
+        '-fflags',
+        '+genpts',
         '-i',
         inputPath,
         '-c:v',
@@ -47,18 +67,24 @@ export async function POST(req: NextRequest) {
         'animation',
         '-crf',
         '17',
-        '-threads',
-        '2',
+        '-r',
+        '30',
+        '-fps_mode',
+        'cfr',
         '-pix_fmt',
         'yuv420p',
         '-c:a',
         'aac',
         '-b:a',
         '192k',
+        '-af',
+        'aresample=async=1:first_pts=0',
         '-movflags',
         '+faststart',
         outputPath,
-      ]);
+      ];
+
+      const ffmpeg = spawn('/usr/bin/ffmpeg', isMp4Input ? remuxArgs : reencodeArgs);
 
       let stderrData = '';
       ffmpeg.stderr.on('data', (data) => {

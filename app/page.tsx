@@ -51,8 +51,15 @@ import {
   Target,
   MousePointerClick,
   MonitorPlay,
+  Search,
 } from 'lucide-react';
 import { SoaraLogo } from '@/components/SoaraLogo';
+import {
+  buildSecurityAuditNativeSessions,
+  findSecurityRuleByScript,
+  findSecurityRuleById,
+} from '@/lib/securityAuditRules';
+import { SecurityRuleContextCard } from '@/components/SecurityRuleContextCard';
 import {
   CodeScript,
   AspectRatioType,
@@ -101,18 +108,7 @@ interface ChatVideoMessage {
 const USER_SESSIONS_STORAGE_KEY = 'codigo_narrado_user_sessions_v1';
 
 const INITIAL_NATIVE_SESSIONS: ChatVideoMessage[] = [
-  {
-    id: 'msg-initial-r01',
-    userPrompt:
-      'Auditoria de Segurança: Se o seu sistema salva senhas usando MD5, pare. Temos um problema. (MD5 vs Argon2id · Security Audit)',
-    timestamp: '08:45',
-    script: PRESETS[0].script,
-    jsonText: JSON.stringify(PRESETS[0].script, null, 2),
-    isJsonVisible: false,
-    isApproved: true,
-    modelUsed: 'Soara · Preset Auditoria de Segurança',
-    isNative: true,
-  },
+  ...buildSecurityAuditNativeSessions(),
   {
     id: 'msg-initial-jwt',
     userPrompt:
@@ -158,6 +154,27 @@ function formatSeconds(sec: number): string {
  * and green checkmarked "Pontos principais").
  */
 function buildStructuredExplanation(script: CodeScript) {
+  const rule = findSecurityRuleByScript(script);
+  if (rule) {
+    return {
+      heading: `Regra ${rule.ruleCode} · O que é ${rule.title}?`,
+      intro: `Esta é a Regra ${rule.ruleCode} do livro "Auditoria de Segurança para Vibe Coding" (Saíde Omar Saíde, Pág. ${rule.page}). Trata-se de uma verificação de severidade ${rule.severity} (${rule.points} pontos na auditoria): ${rule.summary}. ${rule.consequence}`,
+      steps: [
+        `O que são as 36 regras: Matriz de auditoria prática para inspecionar código gerado por IA (Vibe Coding) antes de ir para produção.`,
+        `Do que se trata a Regra ${rule.ruleCode}: ${rule.summary}`,
+        `Por que a IA gera essa falha: Modelos de IA geram códigos que "parecem funcionar" nos testes manuais, mas omitem validações defensivas críticas.`,
+        `Comando pronto para pedir à IA: "${rule.promptParaIA}"`,
+      ],
+      highlights: [
+        `Severidade: ${rule.severity} (${rule.points < 0 ? rule.points + ' pts' : 'Matriz de pontuação'})`,
+        `Secção ${rule.sectionNumber}: ${rule.section} (Página ${rule.page})`,
+        `Risco Real: ${rule.consequence}`,
+        `Correção Obrigatória: ${rule.summary}`,
+      ],
+      conclusion: `Compreender a Regra ${rule.ruleCode} antes de executar o vídeo garante que você entenda exatamente onde está a falha no código e como blindar sua aplicação com o comando correto.`,
+    };
+  }
+
   const segs = script.segments || [];
   const intro =
     segs[0]?.say ||
@@ -229,10 +246,14 @@ export default function HomePage() {
   // Sessions state: holds user-generated sessions + the 2 native scripts (shown in the Sidebar, only rendered in main chat when clicked)
   const [messages, setMessages] = useState<ChatVideoMessage[]>(INITIAL_NATIVE_SESSIONS);
 
-  // Open the revised R01 session immediately so the user can play/edit it, while keeping native & custom sessions isolated in the sidebar
-  const [activeMessageId, setActiveMessageId] = useState<string | null>('msg-initial-r01');
+  // Open the R01 security audit session immediately so the user can play/edit it
+  const [activeMessageId, setActiveMessageId] = useState<string | null>('msg-audit-r01');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
   const [hasLoadedStoredSessions, setHasLoadedStoredSessions] = useState<boolean>(false);
+
+  // Search & category filter for native security sessions
+  const [nativeSearchQuery, setNativeSearchQuery] = useState('');
+  const [nativeFilter, setNativeFilter] = useState<'todos' | 'critico' | 'alto' | 'ctf'>('todos');
 
   // Load persisted user-generated sessions from localStorage on client mount
   useEffect(() => {
@@ -279,7 +300,7 @@ export default function HomePage() {
   const [codeInput, setCodeInput] = useState('');
   const [attachedImages, setAttachedImages] = useState<AttachedImageItem[]>([]);
   const [showComposerExtras, setShowComposerExtras] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<string>('gemini-2.5-flash');
+  const [selectedModel, setSelectedModel] = useState<string>('gemini-3.8-flash');
   const [selectedPreset, setSelectedPreset] = useState<NarrativePreset>('tutorial');
   const [selectedDuration, setSelectedDuration] = useState<VideoDurationTarget>(60);
   const [selectedLanguage, setSelectedLanguage] = useState<ScriptLanguage>('pt-BR');
@@ -332,26 +353,35 @@ export default function HomePage() {
   const [isPresentationControlsVisible, setIsPresentationControlsVisible] = useState(true);
   const presentationControlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const toggleFullscreen = useCallback(() => {
-    if (typeof document === 'undefined') return;
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-      setIsFullscreen(true);
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen().catch(() => {});
-      }
-      setIsFullscreen(false);
-    }
-  }, []);
-
   useEffect(() => {
     if (typeof document === 'undefined') return;
     const handleFsChange = () => {
-      setIsFullscreen(Boolean(document.fullscreenElement));
+      const doc = document as unknown as {
+        fullscreenElement?: Element;
+        webkitFullscreenElement?: Element;
+        mozFullScreenElement?: Element;
+        msFullscreenElement?: Element;
+      };
+      const isNativeFs = Boolean(
+        doc.fullscreenElement ||
+        doc.webkitFullscreenElement ||
+        doc.mozFullScreenElement ||
+        doc.msFullscreenElement
+      );
+      setIsFullscreen(isNativeFs);
     };
+
     document.addEventListener('fullscreenchange', handleFsChange);
-    return () => document.removeEventListener('fullscreenchange', handleFsChange);
+    document.addEventListener('webkitfullscreenchange', handleFsChange);
+    document.addEventListener('mozfullscreenchange', handleFsChange);
+    document.addEventListener('MSFullscreenChange', handleFsChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFsChange);
+      document.removeEventListener('webkitfullscreenchange', handleFsChange);
+      document.removeEventListener('mozfullscreenchange', handleFsChange);
+      document.removeEventListener('MSFullscreenChange', handleFsChange);
+    };
   }, []);
 
   // Merge active background theme with chosen syntax highlighting palette
@@ -465,6 +495,14 @@ export default function HomePage() {
     [messages, activeMessageId]
   );
   const script = activeMessage?.script || PRESETS[0].script;
+
+  const activeSecurityRule = useMemo(() => {
+    if (!activeMessage) return undefined;
+    return (
+      findSecurityRuleByScript(activeMessage.script) ||
+      findSecurityRuleById(activeMessage.id)
+    );
+  }, [activeMessage]);
 
   // Only show the currently selected session in the main chat
   const displayedMessages = useMemo(
@@ -1153,8 +1191,9 @@ export default function HomePage() {
 
       if (runId !== runIdRef.current) return;
 
-      if (seg.mark && focusRange1Based) {
-        const [startL, endL] = focusRange1Based;
+      if (seg.mark) {
+        const [startL, endL] = focusRange1Based || (seg.type ? seg.type : [1, targetScript.code.length]);
+        let found = false;
         for (let l = startL - 1; l <= endL - 1; l++) {
           const text = targetScript.code[l] || '';
           const charIndex = text.indexOf(seg.mark);
@@ -1163,7 +1202,21 @@ export default function HomePage() {
               lineIndex: l,
               range: [charIndex, charIndex + seg.mark.length],
             });
+            found = true;
             break;
+          }
+        }
+        if (!found) {
+          for (let l = 0; l < targetScript.code.length; l++) {
+            const text = targetScript.code[l] || '';
+            const charIndex = text.indexOf(seg.mark);
+            if (charIndex >= 0) {
+              setMarkInfo({
+                lineIndex: l,
+                range: [charIndex, charIndex + seg.mark.length],
+              });
+              break;
+            }
           }
         }
       }
@@ -1847,6 +1900,93 @@ export default function HomePage() {
     setLayoutMode(previousLayoutModeRef.current || 'standard');
   }, []);
 
+  const toggleFullscreen = useCallback(() => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+    const doc = document as unknown as {
+      fullscreenElement?: Element;
+      webkitFullscreenElement?: Element;
+      mozFullScreenElement?: Element;
+      msFullscreenElement?: Element;
+      exitFullscreen?: () => Promise<void>;
+      webkitExitFullscreen?: () => Promise<void>;
+      mozCancelFullScreen?: () => Promise<void>;
+      msExitFullscreen?: () => Promise<void>;
+    };
+    const docEl = document.documentElement as unknown as {
+      requestFullscreen?: () => Promise<void>;
+      webkitRequestFullscreen?: () => Promise<void>;
+      mozRequestFullScreen?: () => Promise<void>;
+      msRequestFullscreen?: () => Promise<void>;
+    };
+
+    const isNativeFs = Boolean(
+      doc.fullscreenElement ||
+      doc.webkitFullscreenElement ||
+      doc.mozFullScreenElement ||
+      doc.msFullscreenElement
+    );
+
+    const isCurrentlyFull = isNativeFs || layoutMode === 'presentation';
+
+    if (!isCurrentlyFull) {
+      // 1. Enter Immersive Presentation Mode immediately so UI expands to 100% full screen
+      enterPresentationMode();
+
+      // 2. Also attempt native browser fullscreen across all modern and legacy engines
+      const reqFs =
+        docEl.requestFullscreen ||
+        docEl.webkitRequestFullscreen ||
+        docEl.mozRequestFullScreen ||
+        docEl.msRequestFullscreen;
+
+      if (reqFs) {
+        try {
+          const promise = reqFs.call(docEl);
+          if (promise && typeof promise.then === 'function') {
+            promise
+              .then(() => setIsFullscreen(true))
+              .catch(() => {
+                // In iframe or restricted environments, presentation mode already handles full screen
+              });
+          } else {
+            setIsFullscreen(true);
+          }
+        } catch {
+          // Fallback handled by presentation mode
+        }
+      }
+    } else {
+      // 1. Exit Presentation mode
+      if (layoutMode === 'presentation') {
+        exitPresentationMode();
+      }
+
+      // 2. Exit native fullscreen if active
+      const exitFs =
+        doc.exitFullscreen ||
+        doc.webkitExitFullscreen ||
+        doc.mozCancelFullScreen ||
+        doc.msExitFullscreen;
+
+      if (exitFs && isNativeFs) {
+        try {
+          const promise = exitFs.call(doc);
+          if (promise && typeof promise.then === 'function') {
+            promise
+              .then(() => setIsFullscreen(false))
+              .catch(() => {});
+          } else {
+            setIsFullscreen(false);
+          }
+        } catch {
+          // ignore
+        }
+      }
+      setIsFullscreen(false);
+    }
+  }, [enterPresentationMode, exitPresentationMode, layoutMode]);
+
   // Global keyboard shortcuts (Presentation mode: Space, Left/Right arrows, Esc, P, R, M)
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -2227,8 +2367,8 @@ export default function HomePage() {
             className="flex items-center gap-2.5 text-left cursor-pointer group"
             title="Ir para o chat inicial (Nova Sessão)"
           >
-            <div className="w-10 h-10 rounded-full bg-white/[0.05] border border-white/15 flex items-center justify-center backdrop-blur-md group-hover:bg-white/[0.09] group-hover:border-white/25 transition-colors">
-              <ExplicodeLogo variant="static" className="w-7 h-7 text-white" />
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-sky-500/20 via-indigo-500/15 to-transparent border border-sky-400/25 flex items-center justify-center backdrop-blur-md group-hover:border-sky-400/40 transition-colors shadow-[0_0_12px_rgba(56,189,248,0.15)]">
+              <SoaraLogo variant="static" className="w-5 h-5 text-sky-400" />
             </div>
             <div>
               <div className="flex items-center gap-1 text-base sm:text-lg font-bold tracking-tight leading-none">
@@ -2300,14 +2440,26 @@ export default function HomePage() {
           <button
             type="button"
             onClick={toggleFullscreen}
-            className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.09] border border-white/10 text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer backdrop-blur-md"
-            title={isFullscreen ? 'Sair da tela cheia (Esc)' : 'Tela cheia (Fullscreen)'}
-            aria-label={isFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
+            className={`p-2 rounded-xl border transition-all cursor-pointer backdrop-blur-md ${
+              layoutMode === 'presentation' || isFullscreen
+                ? 'bg-sky-500/20 hover:bg-sky-500/30 border-sky-400/40 text-sky-200 shadow-sm'
+                : 'bg-white/[0.04] hover:bg-white/[0.09] border-white/10 text-zinc-300 hover:text-white'
+            }`}
+            title={
+              layoutMode === 'presentation' || isFullscreen
+                ? 'Sair da tela cheia (Esc)'
+                : 'Tela cheia / Modo Apresentação (Atalho: P)'
+            }
+            aria-label={
+              layoutMode === 'presentation' || isFullscreen
+                ? 'Sair da tela cheia'
+                : 'Tela cheia'
+            }
           >
-            {isFullscreen ? (
-              <Minimize2 className="w-4 h-4 text-zinc-200" />
+            {layoutMode === 'presentation' || isFullscreen ? (
+              <Minimize2 className="w-4 h-4 text-sky-200" />
             ) : (
-              <Maximize2 className="w-4 h-4 text-zinc-300" />
+              <Maximize2 className="w-4 h-4 text-zinc-200" />
             )}
           </button>
 
@@ -2463,20 +2615,97 @@ export default function HomePage() {
             </div>
 
             {/* 2. Native Built-in Sessions */}
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <div className="px-2 flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
                 <span className="flex items-center gap-1.5">
-                  <FolderCode className="w-3.5 h-3.5 text-zinc-400" />
+                  <FolderCode className="w-3.5 h-3.5 text-sky-400" />
                   <span>Roteiros Nativos</span>
                 </span>
-                <span className="font-mono text-[10px] text-zinc-500">
+                <span className="font-mono text-[10px] text-zinc-400 bg-white/[0.06] px-1.5 py-0.5 rounded">
                   {nativeSessions.length}
                 </span>
               </div>
 
+              {/* Native Search Input */}
+              <div className="relative px-1">
+                <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={nativeSearchQuery}
+                  onChange={(e) => setNativeSearchQuery(e.target.value)}
+                  placeholder="Buscar regra (ex: R01, IDOR, SQL)..."
+                  className="w-full bg-white/[0.04] border border-white/10 rounded-xl pl-8 pr-2.5 py-1.5 text-xs text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-sky-400/50"
+                />
+              </div>
+
+              {/* Filter Tabs */}
+              <div className="flex items-center gap-1 px-1 text-[10px] font-medium overflow-x-auto pb-0.5 scrollbar-none">
+                <button
+                  type="button"
+                  onClick={() => setNativeFilter('todos')}
+                  className={`px-2 py-0.5 rounded-lg transition-colors cursor-pointer shrink-0 ${
+                    nativeFilter === 'todos'
+                      ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
+                      : 'text-zinc-400 hover:text-zinc-200 bg-white/[0.03]'
+                  }`}
+                >
+                  Todas ({nativeSessions.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNativeFilter('critico')}
+                  className={`px-2 py-0.5 rounded-lg transition-colors cursor-pointer shrink-0 ${
+                    nativeFilter === 'critico'
+                      ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                      : 'text-zinc-400 hover:text-zinc-200 bg-white/[0.03]'
+                  }`}
+                >
+                  Críticas
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNativeFilter('alto')}
+                  className={`px-2 py-0.5 rounded-lg transition-colors cursor-pointer shrink-0 ${
+                    nativeFilter === 'alto'
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                      : 'text-zinc-400 hover:text-zinc-200 bg-white/[0.03]'
+                  }`}
+                >
+                  Altas
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNativeFilter('ctf')}
+                  className={`px-2 py-0.5 rounded-lg transition-colors cursor-pointer shrink-0 ${
+                    nativeFilter === 'ctf'
+                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                      : 'text-zinc-400 hover:text-zinc-200 bg-white/[0.03]'
+                  }`}
+                >
+                  CTF
+                </button>
+              </div>
+
               <div className="space-y-1.5">
-                {nativeSessions.map((session) => {
+                {nativeSessions
+                  .filter((session) => {
+                    const q = nativeSearchQuery.toLowerCase().trim();
+                    const matchesQuery =
+                      !q ||
+                      session.script.title.toLowerCase().includes(q) ||
+                      (session.userPrompt && session.userPrompt.toLowerCase().includes(q));
+
+                    if (!matchesQuery) return false;
+                    if (nativeFilter === 'critico') return session.userPrompt?.includes('CRÍTICO');
+                    if (nativeFilter === 'alto') return session.userPrompt?.includes('ALTO');
+                    if (nativeFilter === 'ctf') return session.script.title.includes('CTF');
+                    return true;
+                  })
+                  .map((session) => {
                   const isSelected = activeMessageId === session.id;
+                  const isCrit = session.userPrompt?.includes('CRÍTICO');
+                  const isAlt = session.userPrompt?.includes('ALTO');
+
                   return (
                     <button
                       key={session.id}
@@ -2484,22 +2713,32 @@ export default function HomePage() {
                       onClick={() => handleSelectSession(session.id)}
                       className={`w-full text-left px-3 py-2.5 rounded-xl border transition-all cursor-pointer flex flex-col gap-1 backdrop-blur-md ${
                         isSelected
-                          ? 'bg-white/[0.09] border-white/20 text-zinc-200'
+                          ? 'bg-white/[0.09] border-white/20 text-zinc-200 shadow-sm'
                           : 'bg-white/[0.03] hover:bg-white/[0.06] border-white/10 text-zinc-400'
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center justify-between gap-1.5">
                         <span className="flex items-center gap-1.5 text-xs font-semibold truncate text-zinc-300">
                           <FileCode2
                             className={`w-3.5 h-3.5 shrink-0 ${
-                              isSelected ? 'text-zinc-200' : 'text-zinc-400'
+                              isSelected ? 'text-sky-400' : 'text-zinc-400'
                             }`}
                           />
                           <span className="truncate">{session.script.title}</span>
                         </span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.06] border border-white/10 text-zinc-300 shrink-0">
-                          Nativo
-                        </span>
+                        {isCrit ? (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-rose-500/15 border border-rose-500/30 text-rose-300 font-semibold shrink-0">
+                            Crítico
+                          </span>
+                        ) : isAlt ? (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 font-semibold shrink-0">
+                            Alto
+                          </span>
+                        ) : (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.06] border border-white/10 text-zinc-300 shrink-0">
+                            {session.timestamp}
+                          </span>
+                        )}
                       </div>
                       <p className="text-[11px] text-zinc-400 truncate">
                         {session.userPrompt}
@@ -2555,8 +2794,8 @@ export default function HomePage() {
             {/* Clean Initial Chat State when no session is selected and not currently generating */}
             {displayedMessages.length === 0 && !isGenerating && !chatError && (
               <div className="flex-1 flex flex-col items-center justify-center py-16 sm:py-24 text-center max-w-xl mx-auto gap-5">
-                <div className="w-16 h-16 rounded-2xl bg-white/[0.05] border border-white/15 flex items-center justify-center backdrop-blur-md">
-                  <ExplicodeLogo variant="waves" className="w-9 h-9 text-sky-400" />
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-sky-500/20 via-indigo-500/15 to-transparent border border-sky-400/25 flex items-center justify-center backdrop-blur-md shadow-[0_0_20px_rgba(56,189,248,0.2)]">
+                  <SoaraLogo variant="waves" className="w-9 h-9 text-sky-400" />
                 </div>
 
                 <div className="space-y-2">
@@ -2580,6 +2819,7 @@ export default function HomePage() {
           const article = buildStructuredExplanation(msg.script);
           const sceneCount = msg.script.segments.filter((s) => s.scene).length;
           const isExplanationExpanded = Boolean(expandedExplanations[msg.id]);
+          const securityRule = findSecurityRuleByScript(msg.script) || findSecurityRuleById(msg.id);
 
           // Compute idle line visibilities (all code lines visible when paused/idle)
           const msgLineVisibilities = isCurrentActive
@@ -2629,8 +2869,8 @@ export default function HomePage() {
 
               {/* 2. Assistant Response Bubble (Left-aligned, translucent gray) */}
               <div className="flex items-start gap-3 sm:gap-4">
-                <div className="w-10 h-10 rounded-full bg-white/[0.05] border border-white/15 backdrop-blur-md flex items-center justify-center shrink-0">
-                  <ExplicodeLogo variant="waves" className="w-5 h-5 text-sky-400" />
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-sky-500/20 via-indigo-500/15 to-transparent border border-sky-400/25 backdrop-blur-md flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(56,189,248,0.15)]">
+                  <SoaraLogo variant="waves" className="w-5 h-5 text-sky-400" />
                 </div>
 
                 <div className="flex-1 min-w-0 bg-white/[0.04] border border-white/10 backdrop-blur-md rounded-2xl rounded-tl-sm p-5 sm:p-6 shadow-2xl flex flex-col gap-5">
@@ -2647,6 +2887,11 @@ export default function HomePage() {
                       {msg.script.segments.length} trechos · ~{formatSeconds(timing.total)}
                     </span>
                   </div>
+
+                  {/* Security Rule Context Card (Explains what the 36 rules are and what this specific rule is BEFORE the video starts) */}
+                  {securityRule && (
+                    <SecurityRuleContextCard rule={securityRule} defaultExpanded={true} />
+                  )}
 
                   {/* Structured Explanation (Collapsed by default, expandable manually) */}
                   <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4 text-zinc-300 transition-colors">
@@ -3725,6 +3970,11 @@ export default function HomePage() {
                   </div>
                 )}
 
+                {/* Security Rule Context Card in Docked Panel */}
+                {activeSecurityRule && (
+                  <SecurityRuleContextCard rule={activeSecurityRule} defaultExpanded={false} />
+                )}
+
                 {/* Segments Quick Jump List */}
                 {activeMessage && (
                   <div className="space-y-2">
@@ -4477,11 +4727,10 @@ export default function HomePage() {
                   onChange={(e) => setSelectedModel(e.target.value)}
                   className="bg-[#141417] border border-white/10 rounded-lg px-3 py-2 text-zinc-300 focus:outline-none focus:border-white/25"
                 >
-                  <option value="gemini-2.5-flash">Gemini 2.5 Flash (Recomendado · Rápido)</option>
-                  <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
+                  <option value="gemini-3.8-flash">Gemini 3.8 Flash (Recomendado · Mais Recente)</option>
                   <option value="gemini-flash-latest">Gemini Flash Latest</option>
-                  <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite (Alta Quota)</option>
-                  <option value="gemini-3.8-flash">Gemini 3.8 Flash</option>
+                  <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite (Alta Quota)</option>
+                  <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
                 </select>
               </div>
             </div>

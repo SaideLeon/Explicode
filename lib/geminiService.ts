@@ -1,15 +1,19 @@
 import { GoogleGenAI } from '@google/genai';
 import { maskApiKey, parseGeminiErrorInfo } from '@/lib/aiErrors';
 
-export const PRIMARY_SCRIPT_MODEL = 'gemini-2.5-flash';
+export const PRIMARY_SCRIPT_MODEL = 'gemini-3.8-flash';
 export const FALLBACK_SCRIPT_MODELS = [
+  'gemini-3.8-flash',
+  'gemini-flash-latest',
+  'gemini-3.1-flash-lite',
   'gemini-2.5-flash',
-  'gemini-2.5-flash-lite',
-  'gemini-3-flash-preview',
-  'gemini-2.0-flash',
 ];
 
-export const TTS_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash'];
+export const TTS_MODELS = [
+  'gemini-3.8-flash-lite-tts',
+  'gemini-3.8-flash-tts',
+  'gemini-2.5-flash',
+];
 
 export interface KeyPoolItem {
   rawKey: string;

@@ -87,3 +87,20 @@ export interface PlaybackState {
   geminiVoice: GeminiMaleVoice;
   selectedVoiceIndex: number;
 }
+
+export interface ChatVideoMessage {
+  id: string;
+  userPrompt: string;
+  userCode?: string;
+  userImages?: string[];
+  timestamp: string;
+  script: CodeScript;
+  jsonText: string;
+  isJsonVisible: boolean;
+  isApproved: boolean;
+  modelUsed?: string;
+  jsonError?: string | null;
+  statusNote?: string | null;
+  isNative?: boolean;
+}
+

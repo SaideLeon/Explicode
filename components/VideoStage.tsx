@@ -278,11 +278,10 @@ export function VideoStage({
                       return (
                         <span
                           key={sIdx}
-                          className="inline-block px-1 rounded font-semibold animate-mark-pulse transition-all"
+                          className="inline-block px-1.5 py-0.5 rounded font-bold animate-mark-pulse transition-all border-2 border-amber-300 shadow-[0_0_14px_rgba(250,204,21,0.6)] ring-1 ring-amber-400/50"
                           style={{
-                            backgroundColor: theme.markBg,
-                            color: theme.markText,
-                            boxShadow: `0 0 10px ${theme.markBg}80`,
+                            backgroundColor: theme.markBg || '#facc15',
+                            color: theme.markText || '#090b14',
                           }}
                         >
                           {span.text}

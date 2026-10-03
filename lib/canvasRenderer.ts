@@ -396,24 +396,38 @@ export async function renderScriptToVideoBlob(
 
         const remainingChars = visibleCount - charsDrawn;
         const textToDraw = tok.text.slice(0, remainingChars);
-        const isMarked =
+        const isMarked = Boolean(
           markTerm &&
-          focusRange &&
-          l >= focusRange[0] &&
-          l <= focusRange[1] &&
-          tok.text.includes(markTerm);
+          (tok.text.includes(markTerm) || (tok.text.length >= 2 && markTerm.includes(tok.text))) &&
+          (!focusRange || (l >= focusRange[0] && l <= focusRange[1]))
+        );
 
         const tokenWidth = ctx.measureText(textToDraw).width;
 
         if (isMarked) {
+          ctx.save();
+          // Halo glow
+          ctx.fillStyle = 'rgba(250, 204, 21, 0.28)';
+          ctx.beginPath();
+          ctx.roundRect(Math.round(currentX - 5), y - 19, Math.round(tokenWidth + 10), 26, 7);
+          ctx.fill();
+
+          // Badge background
           ctx.fillStyle = theme.markBg || '#facc15';
           ctx.beginPath();
           ctx.roundRect(Math.round(currentX - 3), y - 17, Math.round(tokenWidth + 6), 23, 5);
           ctx.fill();
+
+          // Embroidered border outline ("bordado")
+          ctx.strokeStyle = '#fef08a';
+          ctx.lineWidth = 1.6;
+          ctx.stroke();
+
+          // High contrast bold text
           ctx.fillStyle = theme.markText || '#090b14';
           ctx.font = `700 ${fontSize}px "JetBrains Mono", monospace`;
           ctx.fillText(textToDraw, Math.round(currentX), y);
-          ctx.font = `500 ${fontSize}px "JetBrains Mono", monospace`;
+          ctx.restore();
         } else {
           ctx.fillStyle =
             theme.syntax[tok.cls as keyof typeof theme.syntax] || theme.codeText || '#f8fafc';
@@ -592,10 +606,31 @@ export async function renderScriptToVideoBlob(
     }
   };
 
+  // Decodifica o áudio de um segmento (fora do caminho crítico da gravação)
+  const decodeSeg = async (idx: number): Promise<AudioBuffer> => {
+    const sg = script.segments[idx];
+    const url = segmentAudioUrls[idx];
+    const fallbackDur = Math.max(2, sg.say.split(/\s+/).length / 2.5);
+    if (!url) return createFallbackAudioBuffer(audioCtx, fallbackDur);
+    try {
+      const res = await fetch(url);
+      const arrayBuf = await res.arrayBuffer();
+      return await audioCtx.decodeAudioData(arrayBuf);
+    } catch {
+      return createFallbackAudioBuffer(audioCtx, fallbackDur);
+    }
+  };
+
+  // Pré-decodifica o primeiro segmento ANTES de ligar o gravador
+  let nextBufPromise: Promise<AudioBuffer> | null =
+    script.segments.length > 0 ? decodeSeg(0) : null;
+  const firstBuf = nextBufPromise ? await nextBufPromise : null;
+  nextBufPromise = firstBuf ? Promise.resolve(firstBuf) : null;
+
   // Flush encoded video chunks every 500ms so uncompressed frames never accumulate in RAM
   recorder.start(500);
 
-  // Play and render each segment synchronously, decoding one AudioBuffer at a time
+  // Play and render each segment, decoding the NEXT one while the current plays
   for (let sIdx = 0; sIdx < script.segments.length; sIdx++) {
     if (shouldCancel && shouldCancel()) {
       if (recorder.state !== 'inactive') recorder.stop();
@@ -606,23 +641,10 @@ export async function renderScriptToVideoBlob(
     }
 
     const seg = script.segments[sIdx];
-    const audioUrl = segmentAudioUrls[sIdx];
 
-    // Decode just this segment's AudioBuffer on demand from its Blob URL
-    let audioBuf: AudioBuffer;
-    if (audioUrl) {
-      try {
-        const res = await fetch(audioUrl);
-        const arrayBuf = await res.arrayBuffer();
-        audioBuf = await audioCtx.decodeAudioData(arrayBuf);
-      } catch {
-        const fallbackDur = Math.max(2, seg.say.split(/\s+/).length / 2.5);
-        audioBuf = createFallbackAudioBuffer(audioCtx, fallbackDur);
-      }
-    } else {
-      const fallbackDur = Math.max(2, seg.say.split(/\s+/).length / 2.5);
-      audioBuf = createFallbackAudioBuffer(audioCtx, fallbackDur);
-    }
+    const audioBuf: AudioBuffer = await (nextBufPromise as Promise<AudioBuffer>);
+    // Começa já a decodificar o segmento seguinte, em paralelo
+    nextBufPromise = sIdx + 1 < script.segments.length ? decodeSeg(sIdx + 1) : null;
 
     const segDuration = audioBuf.duration;
     // Silêncio real no começo/fim do áudio: a cena sincroniza com a FALA, não com o arquivo
@@ -632,7 +654,10 @@ export async function renderScriptToVideoBlob(
     const source = audioCtx.createBufferSource();
     source.buffer = audioBuf;
     source.connect(audioDest);
-    source.start();
+    if (audioCtx.state === 'suspended') await audioCtx.resume().catch(() => {});
+    // Relógio do áudio: a animação segue o tempo real da fala, não o relógio da página
+    const audioStartAt = audioCtx.currentTime;
+    source.start(audioStartAt);
 
     const segFocus: [number, number] | null = seg.focus
       ? [seg.focus[0] - 1, seg.focus[1] - 1]
@@ -655,7 +680,6 @@ export async function renderScriptToVideoBlob(
       ? Math.min(segDuration * 0.75, Math.max(1.2, totalCharsInType * 0.055))
       : 0.1;
 
-    const segStartTime = performance.now();
     const durationMs = segDuration * 1000;
     let lastDrawTime = -frameIntervalMs;
 
@@ -667,7 +691,7 @@ export async function renderScriptToVideoBlob(
         }
 
         const now = performance.now();
-        const elapsed = now - segStartTime;
+        const elapsed = (audioCtx.currentTime - audioStartAt) * 1000;
         const progress = Math.min(1, elapsed / durationMs);
 
         if (now - lastDrawTime >= frameIntervalMs || progress >= 1) {
@@ -785,6 +809,11 @@ export async function renderScriptToVideoBlob(
       resolve(fullBlob);
     };
     if (recorder.state !== 'inactive') {
+      try {
+        recorder.requestData(); // garante o último fragmento
+      } catch {
+        // ignore
+      }
       recorder.stop();
     } else {
       resolve(new Blob(recordedChunks, { type: mimeType }));
@@ -800,14 +829,8 @@ export async function renderScriptToVideoBlob(
 
   const baseFilename = script.file.replace(/\.[^/.]+$/, '') || 'codigo-explicado';
 
-  // If MediaRecorder already produced a native MP4 container, return it directly without server roundtrip!
-  if (format === 'mp4' && mimeType.startsWith('video/mp4') && webmBlob.size > 1024) {
-    return {
-      blob: new Blob([webmBlob], { type: 'video/mp4' }),
-      mimeType: 'video/mp4',
-      filename: `${baseFilename}-${quality}.mp4`,
-    };
-  }
+  // NOTA: o MP4 nativo do MediaRecorder é fragmentado e não traz a duração total.
+  // Por isso passa SEMPRE pelo servidor (remux com ffmpeg) para corrigir os metadados.
 
   // If format is MP4, convert via server endpoint with strict binary validation
   if (format === 'mp4') {

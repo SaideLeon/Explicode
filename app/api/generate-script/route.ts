@@ -116,12 +116,30 @@ function getDurationGuidelines(duration: VideoDurationTarget = 60) {
 function getNarrativePresetInstructions(preset: NarrativePreset = 'tutorial'): string {
   switch (preset) {
     case 'auditoria':
-      return `PRESET NARRATIVO ESCOLHIDO: AUDITORIA DE SEGURANÇA & CODE REVIEW
-1. HOOK DE VULNERABILIDADE (Segmento 1): Destaque imediatamente uma fragilidade ou risco real de segurança no assunto (ex: "Seu sistema pode estar vulnerável se você ainda trata isso dessa forma."). Crie curiosidade técnica imediata SEM sensacionalismo vazio.
-2. IMPACTO E VETOR DE ATAQUE (Segmento 2): Explique o motivo técnico exato pelo qual essa prática compromete a aplicação.
-3. PAINEL DE AUDITORIA (Segmento 3): Apresente cena visual de auditoria ("SECURITY AUDIT" / "⚠️ REVIEW REQUIRED") com nós e conexões.
-4. IMPLEMENTAÇÃO SEGURA (Segmentos centrais): Digite e explique a abordagem blindada e recomendada pela engenharia moderna.
-5. REGRA PRÁTICA VISUAL (Segmento final): Contraste visual entre o que evitar (❌ nós "rose") e o que adotar (✅ nós "green"), fechando com verificação concluída.`;
+      return `PRESET NARRATIVO ESCOLHIDO: AUDITORIA DE SEGURANÇA · MICRO-HISTÓRIA TÉCNICA (45 a 60 segundos)
+ESTRUTURA OBRIGATÓRIA DE INVESTIGAÇÃO EM 7 A 8 SEGMENTOS (RITMO DE RETENÇÃO MÁXIMA):
+1. [0–3s] GANCHO COM CÓDIGO NA TELA (Segmento 1):
+   - PROIBIDO começar como aula ("Regra R0X...", "Nunca deixe...", "Hoje vamos ver...").
+   - Comece com uma constatação intrigante que coloca a falha na tela desde o segundo zero:
+     Exemplo: "Se esta linha aparecer no seu código, você pode ter acabado de entregar uma chave secreta para outra pessoa."
+   - O código com a linha problemática DEVE ser digitado/visível no segmento 1 com "mark" destacado.
+2. [3–10s] CRIAR CURIOSIDADE / O PARADOXO (Segmento 2):
+   - Mostre o paradoxo do "parece que funciona": a aplicação roda perfeitamente em desenvolvimento, enganando o desenvolvedor até o deploy.
+   - Exemplo: "E o pior é que a aplicação pode funcionar perfeitamente. O problema só aparece quando esse código vai parar no lugar errado."
+3. [10–20s] A EXPLICAÇÃO / VETOR DE ATAQUE (Segmento 3):
+   - Explique onde o problema acontece na vida real (histórico do Git, logs, scanners públicos, botnets, concorrência).
+   - Use uma cena visual animada ilustrando o vazamento ou fluxo de ataque.
+4. [20–30s] A CORREÇÃO NO CÓDIGO (Segmento 4):
+   - O código na tela é corrigido e refatorado com a abordagem segura da engenharia.
+   - A narração explica que a solução não é um remendo cosmético, mas a garantia técnica correta.
+5. [30–40s] A REGRA DA AUDITORIA (Segmento 5):
+   - Revela a regra da auditoria de segurança (ex: "É exatamente isso que a Regra R03 verifica: secrets, tokens e credenciais nunca devem ficar dentro do código-fonte.").
+6. [40–50s] RETENÇÃO FINAL / O DETALHE QUE 99% ESQUECE (Segmento 6):
+   - Uma provocação técnica que cria uma segunda curiosidade irresistível.
+   - Exemplo: "Mas existe um detalhe que muita gente esquece: se essa chave já foi publicada no Git, apagar a linha não significa que ela deixou de estar exposta."
+7. [50–60s] CONTINUIDADE / PRÓXIMO EPISÓDIO (Segmento 7):
+   - Gancho direto para o próximo vídeo da série Vibe Coding, incentivando o espectador a não perder o desfecho.
+   - Exemplo: "No próximo vídeo, vamos olhar para esse problema e descobrir o que fazer quando um secret já foi exposto. Se você está criando aplicações com IA, acompanhe a série."`;
 
     case 'erro':
       return `PRESET NARRATIVO ESCOLHIDO: ERRO COMUM E BUGFIX
@@ -247,7 +265,7 @@ function buildResponseSchema(
             mark: {
               type: Type.STRING,
               description:
-                'Opcional: trecho exato dentro das linhas em foco. Omitir se code for [].',
+                'OBRIGATÓRIO QUANDO HOUVER CÓDIGO: Palavra-chave, identificador, nome de função, variável ou operador exato das linhas de foco que a narração em "say" está pronunciando/explicando naquele momento (ex: "function", "calcularTotal", "total", "for", "+=", "return"). DEVE ser uma substring exata de uma das linhas em foco. Omitir apenas se code for [].',
             },
             output: {
               type: Type.STRING,
@@ -474,8 +492,12 @@ DIRETRIZES DE RITMO, RETENÇÃO E ESTRUTURA PARA ${durationInfo.estimatedSec.toU
 3. ${narrativeInstructions}
 4. SE O USUÁRIO ENVIAR UM ROTEIRO JÁ DIVIDIDO EM BLOCOS (com "NARRAÇÃO:" e "VISUAL:"): preserve fielmente as falas ("NARRAÇÃO") enviadas pelo usuário em cada segmento e converta cada descrição "VISUAL" em cenas animadas ("scene" com nós, ícones, cores e gatilhos "on" exatos) e linhas de código ("code").
 5. Quando houver código ("code" não vazio), a contagem de linhas em "type" e "focus" é 1-indexada (1 até code.length) e cada segmento deve digitar no máximo 2 a 4 linhas para não sobrecarregar a tela. Se "code" for [], NÃO inclua "type", "focus" nem "mark".
-6. "say" deve soar 100% natural, fluido e técnico para narração por voz sintetizada.
-7. INCLUA PELO MENOS UMA CENA VISUAL COMPARATIVA usando caixas "rose" (❌) e "green" (✅) e setas tracejadas com "≠" ou "vs".
+6. SISTEMA DE DESTAQUE "mark" (OBRIGATÓRIO EM CADA TRECHO DE CÓDIGO):
+   - Em TODO segmento que explica código ("code" não vazio), você DEVE obrigatoriamente preencher o campo "mark" com a palavra-chave, identificador, variável, função ou operador exato da linha em foco que está sendo pronunciada na narração "say" (ex: "function", "calcularTotal", "total", "for", "+=", "return").
+   - A palavra informada em "mark" DEVE ser uma correspondência exata (substring) dentro de uma das linhas de "focus" ou "type".
+   - O visualizador e o renderizador de vídeo desenham um efeito de bordado/marcador visual iluminado sobre a palavra-chave ao mesmo tempo em que ela é dita pelo narrador, guiando a atenção do aluno com sincronia perfeita entre áudio e código.
+7. "say" deve soar 100% natural, fluido e técnico para narração por voz sintetizada.
+8. INCLUA PELO MENOS UMA CENA VISUAL COMPARATIVA usando caixas "rose" (❌) e "green" (✅) e setas tracejadas com "≠" ou "vs".
 ${SCENE_PROMPT_DOC}`;
 
     // When `mode === 'concept'`, completely overwrite `systemPrompt` so it focuses 100% on theoretical explanations and visual scenes
@@ -561,10 +583,23 @@ ${SCENE_PROMPT_DOC}`;
           ]
         : userMessage;
 
-    const primary = requestedModel || PRIMARY_SCRIPT_MODEL;
-    const fallbackList = [primary, ...FALLBACK_SCRIPT_MODELS].filter(
-      (m, idx, arr) => arr.indexOf(m) === idx
-    );
+    const DEPRECATED_MODELS = [
+      'gemini-1.5-flash',
+      'gemini-1.5-pro',
+      'gemini-pro',
+      'gemini-2.0-flash',
+      'gemini-2.0-pro',
+      'gemini-2.0-flash-thinking',
+    ];
+
+    let primary = requestedModel || PRIMARY_SCRIPT_MODEL;
+    if (DEPRECATED_MODELS.includes(primary)) {
+      primary = PRIMARY_SCRIPT_MODEL;
+    }
+
+    const fallbackList = [primary, ...FALLBACK_SCRIPT_MODELS]
+      .filter((m) => !DEPRECATED_MODELS.includes(m))
+      .filter((m, idx, arr) => arr.indexOf(m) === idx);
 
     const responseSchema = buildResponseSchema(mode, langCode, durationInfo.wordsPerSegment);
     let successfulModel = '';

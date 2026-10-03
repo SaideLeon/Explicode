@@ -200,6 +200,27 @@ export function normalizeAndRepairScript(obj: unknown): ValidationResult {
           }
         }
       }
+
+      // If segment has code (totalLines > 0) but mark is missing, auto-infer the best keyword/token from the focused line!
+      if (!s.mark && totalLines > 0) {
+        const range = s.focus || s.type || [1, 1];
+        const lineText = code[range[0] - 1] || '';
+        const tokens = lineText
+          .replace(/[()[\]{};,]/g, ' ')
+          .split(/\s+/)
+          .filter((t) => t.length >= 2);
+
+        const sayLower = (s.say || '').toLowerCase();
+        const mentionedToken = tokens.find((t) => sayLower.includes(t.toLowerCase()));
+        const chosenToken = mentionedToken || tokens[0];
+
+        if (chosenToken) {
+          s.mark = chosenToken;
+          changes.push(
+            `${prefix}: adicionada marcação automática ("mark": "${chosenToken}") para a linha ${range[0]}.`
+          );
+        }
+      }
     }
 
     if (s.output !== undefined) {

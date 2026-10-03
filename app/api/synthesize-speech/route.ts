@@ -113,7 +113,12 @@ export async function POST(req: NextRequest) {
         const part = response.candidates?.[0]?.content?.parts?.[0];
         if (part && part.inlineData && part.inlineData.data) {
           const rawBuffer = Buffer.from(part.inlineData.data, 'base64');
-          const wavBuffer = pcmToWavBuffer(rawBuffer, 24000, 1);
+          // If already a valid WAV with RIFF/WAVE header, use it directly; otherwise wrap PCM in WAV
+          const isWav =
+            rawBuffer.length > 12 &&
+            rawBuffer.subarray(0, 4).toString('ascii') === 'RIFF' &&
+            rawBuffer.subarray(8, 12).toString('ascii') === 'WAVE';
+          const wavBuffer = isWav ? rawBuffer : pcmToWavBuffer(rawBuffer, 24000, 1);
           audioBase64 = wavBuffer.toString('base64');
           modelSucceeded = model;
           break;
